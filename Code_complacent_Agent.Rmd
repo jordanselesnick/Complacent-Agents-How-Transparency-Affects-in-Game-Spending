@@ -1,0 +1,695 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+library(readr)
+library(ggpubr)
+library(psych)
+
+
+TransNudge_ <- read_csv("~/Desktop/Jordan Capstone_April 14, 2022_08.16.csv")
+```
+
+```{r}
+TransNudgeFinal <- TransNudge_ %>% 
+  filter(`Attention Check 1` == 9) %>%
+  mutate(Donation_Cont = ((as.numeric(`Donation Control`) - 1) / 2)) %>%
+  select(`Donation_Cont`,
+         `Donation Transparent_1`,
+         `Donation Opaque_1`,
+         `Autonomy 1`,
+         `Autonomy 2`,
+         `Autonomy 3`,
+         `Attention Check 1`,
+         `Autonomy 4`,
+         `Freedom 1`,
+         `Freedom 2`,
+         `Freedom 3`,
+         `Freedom 4`,
+         `Agreement`,
+         `Gender`,
+         `Age`,
+         `Race/ethnicity`) 
+
+```
+
+```{r}
+#data cleaning
+TransNudgeFinal2 <- TransNudgeFinal %>% 
+    #NAs in Agreement are 4
+  mutate_at(vars("Agreement"), ~replace_na(.,3)) %>%
+  mutate(donation = case_when(!is.na(Donation_Cont) ~ Donation_Cont,
+                              !is.na(as.numeric(`Donation Transparent_1`)) ~ as.numeric(`Donation Transparent_1`),
+                              !is.na(as.numeric(`Donation Opaque_1`)) ~ as.numeric(`Donation Opaque_1`)),
+         treatment = case_when(!is.na(Donation_Cont) ~ 0,
+                              !is.na(as.numeric(`Donation Transparent_1`)) ~ 1,
+                              !is.na(as.numeric(`Donation Opaque_1`)) ~ 2),
+         overall_freedom = (as.numeric(`Freedom 1`) + as.numeric(`Freedom 2`) + as.numeric(`Freedom 3`) + as.numeric(`Freedom 4`)),
+         avg_freedom = (10 - (overall_freedom/4)),
+        overall_autonomy = (as.numeric(`Autonomy 1`) + as.numeric(`Autonomy 2`) + as.numeric(`Autonomy 3`) + as.numeric(`Autonomy 4`)),
+        avg_autonomy = (overall_autonomy/4),
+        freedom_score = ((avg_freedom + avg_autonomy)/2),
+        agreement = (as.numeric(Agreement)),
+        white = (as.numeric(`Race/ethnicity`) != 2),
+        young = (as.numeric(`Age`) <= 24))
+
+
+#Treatment: 0 = control, 1 = trans, 2 = trad
+#Agreement: 0 = agree, 1 = disagree, 2 = neither agree nor disagree, 3 = na (control)
+```
+
+
+Hypotheses 1 & 2: Treatment on donation
+
+```{r}
+#kruskal-wallis comparing donations by treatment
+kruskal.test(donation ~ treatment, data = TransNudgeFinal2)
+```
+
+```{r}
+#wilcox comparing donations by treatment 1v1
+
+#trans vs trad
+TransNudgeFinal2 %>% 
+  filter(treatment != 0) %>% 
+  wilcox.test(donation ~ treatment, data = .) 
+
+#control vs trad
+TransNudgeFinal2 %>% 
+  filter(treatment != 1) %>% 
+  wilcox.test(donation ~ treatment, data = .) 
+
+#control vs trans
+TransNudgeFinal2 %>% 
+  filter(treatment != 2) %>% 
+  wilcox.test(donation ~ treatment, data = .) 
+```
+
+```{r}
+#cohen D power of how treatment predicts donation
+
+#trans vs. trad
+TransNudgeFinal2 %>% 
+  filter(treatment != 0) %>% 
+  cohen.d(donation ~ treatment, data = .) 
+
+#control vs. trad
+TransNudgeFinal2 %>% 
+  filter(treatment != 1) %>% 
+  cohen.d(donation ~ treatment, data = .) 
+
+#trans vs. control
+TransNudgeFinal2 %>% 
+  filter(treatment != 2) %>% 
+  cohen.d(donation ~ treatment, data = .) 
+```
+
+
+Hypothesis 3: Agreement on donation
+
+```{r}
+#kruskal-wallis comparing donations by agreement
+Hyp3 <- TransNudgeFinal2 %>% filter (agreement != 3)
+kruskal.test(donation ~ agreement, data = Hyp3)
+```
+
+```{r}
+#wilcox comparing donations by agreement 1v1
+
+#Disagree vs. Neutral
+Hyp3 %>% 
+  filter(agreement != 0) %>% 
+  wilcox.test(donation ~ agreement, data = .) 
+
+#Agree vs. Neutral
+Hyp3 %>% 
+  filter(agreement != 1) %>% 
+  wilcox.test(donation ~ agreement, data = .) 
+
+#Agree vs. Disagree
+Hyp3 %>% 
+  filter(agreement != 2) %>% 
+  wilcox.test(donation ~ agreement, data = .) 
+```
+
+```{r}
+#cohen D power of how agreement predicts donation
+
+#Disagree vs. Neutral
+Hyp3 %>% 
+  filter(agreement != 0) %>% 
+  cohen.d(donation ~ agreement, data = .) 
+
+#Agree vs. Neutral
+Hyp3 %>% 
+  filter(agreement != 1) %>% 
+  cohen.d(donation ~ agreement, data = .) 
+
+#Agree vs. Disagree
+Hyp3 %>% 
+  filter(agreement != 2) %>% 
+  cohen.d(donation ~ agreement, data = .) 
+
+```
+
+
+Hypotheses 4 & 5: Treatment on freedom
+
+```{r}
+#kruskal-wallis comparing freedom by treatment
+kruskal.test(freedom_score ~ treatment, data = TransNudgeFinal2)
+```
+
+```{r}
+#wilcox comparing freedom by treatment 1v1
+
+#trans vs trad
+TransNudgeFinal2 %>% 
+  filter(treatment != 0) %>% 
+  wilcox.test(freedom_score ~ treatment, data = .) 
+
+#control vs trad
+TransNudgeFinal2 %>% 
+  filter(treatment != 1) %>% 
+  wilcox.test(freedom_score ~ treatment, data = .) 
+
+#control vs trans
+TransNudgeFinal2 %>% 
+  filter(treatment != 2) %>% 
+  wilcox.test(freedom_score ~ treatment, data = .) 
+```
+
+```{r}
+#cohen D power of how treatment predicts freedom
+
+#trans vs. trad
+TransNudgeFinal2 %>% 
+  filter(treatment != 0) %>% 
+  cohen.d(freedom_score ~ treatment, data = .) 
+
+#control vs. trad
+TransNudgeFinal2 %>% 
+  filter(treatment != 1) %>% 
+  cohen.d(freedom_score ~ treatment, data = .) 
+
+#trans vs. control
+TransNudgeFinal2 %>% 
+  filter(treatment != 2) %>% 
+  cohen.d(freedom_score ~ treatment, data = .) 
+```
+
+
+Hypothesis 6: Agreement on freedom
+
+```{r}
+#kruskal-wallis comparing freedom by agreement
+Hyp3 <- TransNudgeFinal2 %>% filter (agreement != 3)
+kruskal.test(freedom_score ~ agreement, data = Hyp3)
+```
+
+```{r}
+#wilcox comparing freedom by agreement 1v1
+
+#Disagree vs. Neutral
+Hyp3 %>% 
+  filter(agreement != 0) %>% 
+  wilcox.test(freedom_score ~ agreement, data = .) 
+
+#Agree vs. Neutral
+Hyp3 %>% 
+  filter(agreement != 1) %>% 
+  wilcox.test(freedom_score ~ agreement, data = .) 
+
+#Agree vs. Disagree
+Hyp3 %>% 
+  filter(agreement != 2) %>% 
+  wilcox.test(freedom_score ~ agreement, data = .) 
+```
+
+```{r}
+#cohen D power of how agreement predicts freedom
+
+#Disagree vs. Neutral
+Hyp3 %>% 
+  filter(agreement != 0) %>% 
+  cohen.d(freedom_score ~ agreement, data = .) 
+
+#Agree vs. Neutral
+Hyp3 %>% 
+  filter(agreement != 1) %>% 
+  cohen.d(freedom_score ~ agreement, data = .) 
+
+#Agree vs. Disagree
+Hyp3 %>% 
+  filter(agreement != 2) %>% 
+  cohen.d(freedom_score ~ agreement, data = .) 
+
+```
+
+
+Exploratory analysis 1: freedom by condition within neutral agreement
+
+```{r}
+#wilcox comparing freedom by treatment within neutral 1v1
+
+neutral <- TransNudgeFinal2 %>% filter(agreement == 2) 
+
+#trans vs. trad
+neutral %>% 
+  wilcox.test(freedom_score ~ treatment, data = .) 
+```
+
+```{r}
+#cohen D power of how treatment predicts freedom with neutral
+
+#trans vs. trad
+neutral %>% 
+  cohen.d(freedom_score ~ treatment, data = .) 
+
+```
+
+
+Exploratory analysis 2: donation by condition within neutral agreement
+
+```{r}
+#wilcox comparing donation by treatment within neutral 1v1
+
+#trans vs. trad
+neutral %>% 
+  wilcox.test(donation ~ treatment, data = .) 
+```
+
+```{r}
+#cohen D power of how treatment predicts freedom with neutral
+
+#trans vs. trad
+neutral %>% 
+  cohen.d(donation ~ treatment, data = .) 
+
+```
+
+
+Exploratory Analysis 3: Agreement on donation within Trans condition
+
+```{r}
+#kruskal-wallis comparing donations by agreement within trans cond
+Transcond <- TransNudgeFinal2 %>% filter(treatment == 1) %>% filter(agreement !=3)
+
+kruskal.test(donation ~ agreement, data = Transcond)
+```
+
+```{r}
+#wilcox comparing donations by agreement within trans cond 1v1
+
+#disagree vs neutral
+Transcond %>% 
+  filter(agreement != 0) %>% 
+  wilcox.test(donation ~ agreement, data = .) 
+
+#agree vs neutral
+Transcond %>% 
+  filter(agreement != 1) %>% 
+  wilcox.test(donation ~ agreement, data = .) 
+
+#agree vs disagree
+Transcond %>% 
+  filter(agreement != 2) %>% 
+  wilcox.test(donation ~ agreement, data = .) 
+```
+
+```{r}
+#cohen D power of how agreement predicts donation with transcond
+
+#disagree vs. neutral
+Transcond %>% 
+  filter(agreement != 0) %>% 
+  cohen.d(donation ~ agreement, data = .) 
+
+#agree vs. neutral
+Transcond %>% 
+  filter(agreement != 1) %>% 
+  cohen.d(donation ~ agreement, data = .) 
+
+#agree vs. disagree
+Transcond %>% 
+  filter(agreement != 2) %>% 
+  cohen.d(donation ~ agreement, data = .) 
+```
+
+
+Exploratory Analysis 4: Agreement on freedom within Trans condition
+
+```{r}
+#kruskal-wallis comparing freedom by agreement
+Transcond <- TransNudgeFinal2 %>% filter(treatment == 1) %>% filter(agreement !=3)
+
+kruskal.test(freedom_score ~ agreement, data = Transcond)
+```
+
+```{r}
+#wilcox comparing freedom by agreement within trans cond 1v1
+
+#disagree vs neutral
+Transcond %>% 
+  filter(agreement != 0) %>% 
+  wilcox.test(freedom_score ~ agreement, data = .) 
+
+#agree vs neutral
+Transcond %>% 
+  filter(agreement != 1) %>% 
+  wilcox.test(freedom_score ~ agreement, data = .) 
+
+#agree vs disagree
+Transcond %>% 
+  filter(agreement != 2) %>% 
+  wilcox.test(freedom_score ~ agreement, data = .) 
+```
+
+```{r}
+#cohen D power of how agreement predicts freedom with transcond
+
+#disagree vs. neutral
+Transcond %>% 
+  filter(agreement != 0) %>% 
+  cohen.d(freedom_score ~ agreement, data = .) 
+
+#agree vs. neutral
+Transcond %>% 
+  filter(agreement != 1) %>% 
+  cohen.d(freedom_score ~ agreement, data = .) 
+
+#agree vs. disagree
+Transcond %>% 
+  filter(agreement != 2) %>% 
+  cohen.d(freedom_score ~ agreement, data = .) 
+```
+
+
+Demographic Analyses
+
+```{r}
+#Race/ethnicity
+#donation
+TransNudgeFinal2 %>% 
+  wilcox.test(donation ~ white, data = .) 
+#freedom
+TransNudgeFinal2 %>% 
+  wilcox.test(freedom_score ~ white, data = .) 
+
+#Gender
+#donation
+TransNudgeFinal2 %>% 
+  wilcox.test(donation ~ Gender, data = .) 
+#freedom
+TransNudgeFinal2 %>% 
+  wilcox.test(freedom_score ~ Gender, data = .) 
+
+#Age
+#donation
+TransNudgeFinal2 %>% 
+  wilcox.test(donation ~ young, data = .) 
+#freedom
+TransNudgeFinal2 %>% 
+  wilcox.test(freedom_score ~ young, data = .) 
+```
+
+
+Some Summary Stats
+
+```{r}
+
+#average donation by treatment
+ #control
+      TransNudgeFinal2 %>%   
+      filter(treatment == 0) %>%
+        summarize(min = min(donation),
+          count = n(),
+          median = median(donation),
+          mean = mean(donation))
+#trans
+      TransNudgeFinal2 %>%   
+      filter(treatment == 1) %>%
+        summarize(min = min(donation),
+          count = n(),
+          median = median(donation),
+          mean = mean(donation))
+#trad
+            TransNudgeFinal2 %>%   
+      filter(treatment == 2) %>%
+        summarize(min = min(donation),
+          count = n(),
+          median = median(donation),
+          mean = mean(donation))
+            
+#average donation by agreement
+#agree
+      TransNudgeFinal2 %>%   
+      filter(agreement == 0) %>%
+        summarize(min = min(donation),
+          count = n(),
+          median = median(donation),
+          mean = mean(donation))
+#disagree
+      TransNudgeFinal2 %>%   
+      filter(agreement == 1) %>%
+        summarize(min = min(donation),
+          count = n(),
+          median = median(donation),
+          mean = mean(donation))
+#neutral
+            TransNudgeFinal2 %>%   
+      filter(agreement == 2) %>%
+        summarize(min = min(donation),
+          count = n(),
+          median = median(donation),
+          mean = mean(donation))
+            
+#average freedom by treatment
+#control
+      TransNudgeFinal2 %>%   
+      filter(treatment == 0) %>%
+        summarize(min = min(freedom_score),
+          count = n(),
+          median = median(freedom_score),
+          mean = mean(freedom_score))
+#trans
+      TransNudgeFinal2 %>%   
+      filter(treatment == 1) %>%
+        summarize(min = min(freedom_score),
+          count = n(),
+          median = median(freedom_score),
+          mean = mean(freedom_score))
+#trad
+            TransNudgeFinal2 %>%   
+      filter(treatment == 2) %>%
+        summarize(min = min(freedom_score),
+          count = n(),
+          median = median(freedom_score),
+          mean = mean(freedom_score))
+            
+#average freedom by agreement
+#agree
+      TransNudgeFinal2 %>%   
+      filter(agreement == 0) %>%
+        summarize(min = min(freedom_score),
+          count = n(),
+          median = median(freedom_score),
+          mean = mean(freedom_score))
+#disagree
+      TransNudgeFinal2 %>%   
+      filter(agreement == 1) %>%
+        summarize(min = min(freedom_score),
+          count = n(),
+          median = median(freedom_score),
+          mean = mean(freedom_score))
+#neutral
+            TransNudgeFinal2 %>%   
+      filter(agreement == 2) %>%
+        summarize(min = min(freedom_score),
+          count = n(),
+          median = median(freedom_score),
+          mean = mean(freedom_score))
+            
+```
+
+
+
+Data visualizations
+
+Hypotheses 1 & 2: donation by treatment
+
+```{r}
+
+#visualization for donation comparison by treatment
+
+my_comparisons <- list( c("0", "1"), c("1", "2"), c("0", "2") )
+
+
+TransNudgeFinal2 %>% 
+  ggplot(aes(x = as.factor(treatment), y = donation)) +
+  geom_boxplot() + 
+  geom_jitter() +
+  ylab("Donation") +
+  xlab("Treatment") +
+  scale_x_discrete(labels = c("Control", "Transparent", "Traditional")) +
+  theme_classic() +
+  stat_compare_means(comparisons = my_comparisons)+ # Add pairwise comparisons p-value
+  stat_compare_means(label.y = 14)
+```
+
+
+Hypothesis 3: donation by agreement 
+
+```{r}
+
+#visualization for donation comparison by agreement
+
+my_comparisons <- list( c("0", "1"), c("1", "2"), c("0", "2") )
+
+
+Hyp3 %>% 
+  ggplot(aes(x = as.factor(agreement), y = donation)) +
+  geom_boxplot() + 
+  geom_jitter() +
+  ylab("Donation") +
+  xlab("Agreement Type") +
+  scale_x_discrete(labels = c("Agree", "Disagree", "Neutral")) +
+  theme_classic() +
+  stat_compare_means(comparisons = my_comparisons)+ # Add pairwise comparisons p-value
+  stat_compare_means(label.y = 14)
+```
+
+
+Hypotheses 4 & 5: Treatment on freedom
+
+```{r}
+
+#visualization for freedom comparison by treatment 
+
+my_comparisons <- list( c("0", "1"), c("1", "2"), c("0", "2") )
+
+
+TransNudgeFinal2 %>% 
+  ggplot(aes(x = as.factor(treatment), y = freedom_score)) +
+  geom_boxplot() + 
+  geom_jitter() +
+  ylab("Average Perceived Freedom Score") +
+  xlab("Treatment") +
+  scale_x_discrete(labels = c("Control", "Transparent", "Traditional")) +
+  theme_classic() +
+  stat_compare_means(comparisons = my_comparisons)+ # Add pairwise comparisons p-value
+  stat_compare_means(label.y = 14)
+```
+
+
+Hypothesis 6: Agreement on freedom
+
+```{r}
+
+#visualization for freedom comparison by agreement 
+
+my_comparisons <- list( c("0", "1"), c("1", "2"), c("0", "2") )
+
+
+Hyp3 %>% 
+  ggplot(aes(x = as.factor(agreement), y = freedom_score)) +
+  geom_boxplot() + 
+  geom_jitter() +
+  ylab("Average Perceived Freedom Score") +
+  xlab("Agreement Type") +
+  scale_x_discrete(labels = c("Agree", "Disagree", "Neutral")) +
+  theme_classic() +
+  stat_compare_means(comparisons = my_comparisons)+ # Add pairwise comparisons p-value
+  stat_compare_means(label.y = 15) + 
+  scale_y_continuous(limits=c(0,15), breaks = c(0,5,10))
+```
+
+
+Exploratory Analysis 1: treatment on freedom within neutral
+
+```{r}
+
+#visualization for freedom comparison by treatment within neutral
+
+my_comparisons <- list( c("0", "1"), c("1", "2"), c("0", "2") )
+
+
+neutral %>% 
+  ggplot(aes(x = as.factor(treatment), y = freedom_score)) +
+  geom_boxplot() + 
+  geom_jitter() +
+  ylab("Average Perceived Freedom Score") +
+  xlab("Treatment for those who felt neutral about the Salvation Army") +
+  scale_x_discrete(labels = c("Transparent", "Traditional")) +
+  theme_classic() +
+  stat_compare_means(comparisons = my_comparisons)+ # Add pairwise comparisons p-value
+  stat_compare_means(label.y = 12)
+```
+
+
+Exploratory Analysis 2: treatment on donation within neutral
+
+```{r}
+
+#visualization for freedom comparison by treatment within neutral
+
+my_comparisons <- list( c("0", "1"), c("1", "2"), c("0", "2") )
+
+
+neutral %>% 
+  ggplot(aes(x = as.factor(treatment), y = donation)) +
+  geom_boxplot() + 
+  geom_jitter() +
+  ylab("Donation") +
+  xlab("Treatment for those who feel neutral about the Salvation Army") +
+  scale_x_discrete(labels = c("Transparent", "Traditional")) +
+  theme_classic() +
+  stat_compare_means(comparisons = my_comparisons)+ # Add pairwise comparisons p-value
+  stat_compare_means(label.y = 10)
+```
+
+
+Exploratory Analysis 3: Agreement on donation within Trans condition
+
+```{r}
+
+#visualization for donation comparison by agreement within trans condition
+
+my_comparisons <- list( c("0", "1"), c("1", "2"), c("0", "2") )
+
+
+Transcond %>% 
+  ggplot(aes(x = as.factor(agreement), y = donation)) +
+  geom_boxplot() + 
+  geom_jitter() +
+  ylab("Donation") +
+  xlab("Agreement Type within Transparent Treatment") +
+  scale_x_discrete(labels = c("Agree", "Disagree", "Neutral")) +
+  theme_classic() +
+  stat_compare_means(comparisons = my_comparisons)+ # Add pairwise comparisons p-value
+  stat_compare_means(label.y = 14)
+```
+
+
+Exploratory Analysis 4: Agreement on freedom within Trans condition
+
+```{r}
+
+#visualization for freedom comparison by agreement within trans cond
+
+my_comparisons <- list( c("0", "1"), c("1", "2"), c("0", "2") )
+
+
+Transcond %>% 
+  ggplot(aes(x = as.factor(agreement), y = freedom_score)) +
+  geom_boxplot() + 
+  geom_jitter() +
+  ylab("Average Perceived Freedom Score") +
+  xlab("Agreement Type within Transparent Treatment") +
+  scale_x_discrete(labels = c("Agree", "Disagree", "Neutral")) +
+  theme_classic() +
+  stat_compare_means(comparisons = my_comparisons)+ # Add pairwise comparisons p-value
+  stat_compare_means(label.y = 15)
+```
